@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Page Replacement Algorithm Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --panel: #111827;
+      --border: #1e293b;
+      --accent: #00e5ff;
+      --green: #00ff88;
+      --red: #ff4d6d;
+      --yellow: #ffd60a;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --hit: #00ff8833;
+      --miss: #ff4d6d33;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Exo 2', sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--accent);
+      text-shadow: 0 0 20px #00e5ff66;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 28px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      font-size: 0.75rem;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 0.78rem; color: var(--muted); letter-spacing: 1px; }
+
+    input[type="text"], input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input[type="text"] { width: 320px; }
+    input[type="number"] { width: 100px; }
+
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px #00e5ff22; }
+
+    .algo-toggle {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .algo-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 10px 18px;
+      transition: all 0.2s;
+    }
+
+    .algo-btn.active { border-color: var(--accent); color: var(--accent); background: #00e5ff11; }
+    .algo-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .run-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0a0e1a;
+      cursor: pointer;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      padding: 11px 28px;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .run-btn:hover { background: #33eeff; box-shadow: 0 0 20px #00e5ff55; }
+
+    /* Results */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .algo-result { border-radius: 12px; overflow: hidden; }
+
+    .algo-header {
+      padding: 12px 18px;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .fifo-header { background: #7c3aed22; border: 1px solid #7c3aed55; color: #a78bfa; border-bottom: none; }
+    .lru-header  { background: #0891b222; border: 1px solid #0891b255; color: #38bdf8; border-bottom: none; }
+    .opt-header  { background: #05966922; border: 1px solid #05966955; color: #34d399; border-bottom: none; }
+
+    .algo-body {
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      background: var(--panel);
+    }
+
+    /* Step table */
+    .step-table { width: 100%; border-collapse: collapse; font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; }
+    .step-table th {
+      background: #0a0e1a;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-table td { padding: 7px 12px; border-bottom: 1px solid #1e293b44; vertical-align: middle; }
+    .step-table tr:last-child td { border-bottom: none; }
+
+    .page-cell { font-weight: 700; font-size: 1rem; }
+    .frames-cell { color: #94a3b8; }
+    .frame-slot { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; margin-right: 3px; font-size: 0.78rem; }
+    .frame-slot.new { border-color: var(--green); color: var(--green); }
+
+    .hit-badge  { background: var(--hit);  color: var(--green); border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; }
+    .miss-badge { background: var(--miss); color: var(--red);   border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; }
+
+    /* Metrics bar */
+    .metrics {
+      display: flex;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .metric {
+      flex: 1;
+      padding: 12px 14px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .metric:last-child { border-right: none; }
+    .metric-val { font-size: 1.4rem; font-weight: 800; font-family: 'Share Tech Mono', monospace; }
+    .metric-lbl { font-size: 0.65rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+    .green { color: var(--green); }
+    .red   { color: var(--red); }
+    .yellow{ color: var(--yellow); }
+
+    /* Bar chart */
+    .bar-section { padding: 18px; border-top: 1px solid var(--border); }
+    .bar-section h3 { font-size: 0.7rem; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .bar-label { width: 70px; font-size: 0.78rem; font-family: 'Share Tech Mono', monospace; color: var(--muted); }
+    .bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 20px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; padding-left: 8px; font-size: 0.72rem; font-weight: 700; }
+    .bar-fifo { background: #7c3aed; }
+    .bar-lru  { background: #0891b2; }
+    .bar-opt  { background: #059669; }
+
+    .empty-msg { text-align: center; color: var(--muted); padding: 40px; font-size: 0.9rem; font-family: 'Share Tech Mono', monospace; }
+
+    /* Scrollable table */
+    .table-wrap { max-height: 300px; overflow-y: auto; }
+    .table-wrap::-webkit-scrollbar { width: 4px; }
+    .table-wrap::-webkit-scrollbar-track { background: transparent; }
+    .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.4rem; }
+      input[type="text"] { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>⚙ PAGE REPLACEMENT SIMULATOR</h1>
+<p class="subtitle">// OS Project — FIFO · LRU · OPTIMAL //</p>
+
+<!-- INPUT CARD -->
+<div class="card">
+  <h2>⬡ Configuration</h2>
+  <div class="input-row">
+    <div class="field">
+      <label>Reference String (space or comma separated)</label>
+      <input type="text" id="refString" value="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1" placeholder="e.g. 1 2 3 4 1 2 5"/>
+    </div>
+    <div class="field">
+      <label>Frame Size</label>
+      <input type="number" id="frameSize" value="3" min="1" max="10"/>
+    </div>
+    <div class="field">
+      <label>Algorithms</label>
+      <div class="algo-toggle">
+        <button class="algo-btn active" data-algo="fifo" onclick="toggleAlgo(this)">FIFO</button>
+        <button class="algo-btn active" data-algo="lru"  onclick="toggleAlgo(this)">LRU</button>
+        <button class="algo-btn active" data-algo="opt"  onclick="toggleAlgo(this)">OPTIMAL</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="run-btn" onclick="simulate()">▶ Run</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON CHART CARD -->
+<div class="card" id="chartCard" style="display:none">
+  <h2>⬡ Fault Rate Comparison</h2>
+  <div id="chartArea"></div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-grid" id="resultsGrid">
+  <div class="empty-msg">Configure inputs above and click ▶ Run to simulate.</div>
+</div>
+
+<script>
+  const selected = { fifo: true, lru: true, opt: true };
+
+  function toggleAlgo(btn) {
+    const a = btn.dataset.algo;
+    selected[a] = !selected[a];
+    btn.classList.toggle('active', selected[a]);
+  }
+
+  /* ── FIFO ─────────────────────────────────────── */
+  function runFIFO(pages, capacity) {
+    let frames = [], queue = [], faults = 0, hits = 0, steps = [];
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      if (frames.includes(p)) {
+        hits++;
+        steps.push({ page: p, frames: [...frames], result: 'HIT', replaced: null });
+      } else {
+        faults++;
+        let replaced = null;
+        if (frames.length < capacity) { frames.push(p); queue.push(p); }
+        else { replaced = queue.shift(); frames[frames.indexOf(replaced)] = p; queue.push(p); }
+        steps.push({ page: p, frames: [...frames], result: 'MISS', replaced });
+      }
+    }
+    return { steps, faults, hits };
+  }
+
+  /* ── LRU ──────────────────────────────────────── */
+  function runLRU(pages, capacity) {
+    let frames = [], faults = 0, hits = 0, steps = [];
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      if (frames.includes(p)) {
+        hits++;
+        frames.splice(frames.indexOf(p), 1);
+        frames.push(p);
+        steps.push({ page: p, frames: [...frames], result: 'HIT', replaced: null });
+      } else {
+        faults++;
+        let replaced = null;
+        if (frames.length < capacity) { frames.push(p); }
+        else { replaced = frames.shift(); frames.push(p); }
+        steps.push({ page: p, frames: [...frames], result: 'MISS', replaced });
+      }
+    }
+    return { steps, faults, hits };
+  }
+
+  /* ── OPTIMAL ──────────────────────────────────── */
+  function runOPTIMAL(pages, capacity) {
+    let frames = [], faults = 0, hits = 0, steps = [];
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      if (frames.includes(p)) {
+        hits++;
+        steps.push({ page: p, frames: [...frames], result: 'HIT', replaced: null });
+      } else {
+        faults++;
+        let replaced = null;
+        if (frames.length < capacity) { frames.push(p); }
+        else {
+          // find page used farthest in future
+          let farthest = -1, victim = frames[0];
+          for (let f of frames) {
+            let next = pages.indexOf(f, i + 1);
+            if (next === -1) { victim = f; break; }
+            if (next > farthest) { farthest = next; victim = f; }
+          }
+          replaced = victim;
+          frames[frames.indexOf(victim)] = p;
+        }
+        steps.push({ page: p, frames: [...frames], result: 'MISS', replaced });
+      }
+    }
+    return { steps, faults, hits };
+  }
+
+  /* ── RENDER ───────────────────────────────────── */
+  function renderAlgo(name, colorClass, headerClass, data, total) {
+    const rate = ((data.faults / total) * 100).toFixed(1);
+    const hitRate = ((data.hits / total) * 100).toFixed(1);
+
+    const rows = data.steps.map((s, idx) => {
+      const framesCells = s.frames.map(f =>
+        `<span class="frame-slot ${s.replaced === null && s.result==='MISS' && s.frames[s.frames.length-1]===f && s.result!=='HIT' ? 'new' : s.result==='MISS' && f===s.page ? 'new' : ''}">${f}</span>`
+      ).join('');
+      const badge = s.result === 'HIT'
+        ? `<span class="hit-badge">HIT</span>`
+        : `<span class="miss-badge">MISS</span>`;
+      return `<tr>
+        <td class="page-cell" style="color:var(--accent)">${s.page}</td>
+        <td class="frames-cell">${framesCells}</td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="algo-result">
+      <div class="algo-header ${headerClass}">
+        <span>${name}</span>
+        <span style="font-size:0.75rem;opacity:0.7">${total} refs</span>
+      </div>
+      <div class="algo-body">
+        <div class="table-wrap">
+          <table class="step-table">
+            <thead><tr><th>PAGE</th><th>FRAMES</th><th>STATUS</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-val red">${data.faults}</div>
+            <div class="metric-lbl">Faults</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val green">${data.hits}</div>
+            <div class="metric-lbl">Hits</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val yellow">${rate}%</div>
+            <div class="metric-lbl">Fault Rate</div>
+          </div>
+          <div class="metric">
+            <div class="metric-val" style="color:var(--accent)">${hitRate}%</div>
+            <div class="metric-lbl">Hit Rate</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderChart(results, total) {
+    const algos = Object.entries(results);
+    const max = Math.max(...algos.map(([,d]) => d.faults));
+    const bars = algos.map(([name, data]) => {
+      const pct = max === 0 ? 0 : (data.faults / max * 100).toFixed(1);
+      const cls = name === 'FIFO' ? 'bar-fifo' : name === 'LRU' ? 'bar-lru' : 'bar-opt';
+      return `<div class="bar-row">
+        <div class="bar-label">${name}</div>
+        <div class="bar-track">
+          <div class="bar-fill ${cls}" style="width:${pct}%">${data.faults} faults</div>
+        </div>
+      </div>`;
+    }).join('');
+    return bars;
+  }
+
+  function simulate() {
+    const raw = document.getElementById('refString').value.trim();
+    const capacity = parseInt(document.getElementById('frameSize').value);
+
+    if (!raw) return alert('Please enter a reference string.');
+    if (isNaN(capacity) || capacity < 1) return alert('Frame size must be at least 1.');
+
+    const pages = raw.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+    if (pages.length === 0) return alert('Invalid reference string.');
+
+    const total = pages.length;
+    const results = {};
+    const htmlParts = [];
+
+    if (selected.fifo) { const d = runFIFO(pages, capacity); results['FIFO'] = d; htmlParts.push(renderAlgo('FIFO', 'purple', 'fifo-header', d, total)); }
+    if (selected.lru)  { const d = runLRU(pages, capacity);  results['LRU']  = d; htmlParts.push(renderAlgo('LRU',  'blue',   'lru-header',  d, total)); }
+    if (selected.opt)  { const d = runOPTIMAL(pages, capacity); results['OPT'] = d; htmlParts.push(renderAlgo('OPTIMAL', 'green', 'opt-header', d, total)); }
+
+    const grid = document.getElementById('resultsGrid');
+    grid.innerHTML = htmlParts.length ? htmlParts.join('') : '<div class="empty-msg">Select at least one algorithm.</div>';
+
+    const chartCard = document.getElementById('chartCard');
+    if (Object.keys(results).length > 0) {
+      chartCard.style.display = 'block';
+      document.getElementById('chartArea').innerHTML = renderChart(results, total);
+    } else {
+      chartCard.style.display = 'none';
+    }
+  }
+
+  // Run on load with defaults
+  window.onload = simulate;
+</script>
+</body>
+</html>
